@@ -34,20 +34,33 @@ def test_parse_factor():
     factor = <number> | <identifier> | "(" expression ")"
     """
     print("testing parse_factor()")
-    for s in ["1","22","333"]:
+    # Test simple numbers
+    for s in ["1", "22", "333"]:
         tokens = tokenize(s)
         ast, tokens = parse_factor(tokens)
-        assert ast=={'tag': 'number', 'value': int(s)}
+        assert ast == {'tag': 'number', 'value': int(s)}
         assert tokens[0]['tag'] == None 
-    for s in ["(1)","(22)"]:
+    # Test parenthesized numbers
+    for s in ["(1)", "(22)"]:
         tokens = tokenize(s)
         ast, tokens = parse_factor(tokens)
-        s_n = s.replace("(","").replace(")","")
-        assert ast=={'tag': 'number', 'value': int(s_n)}
+        s_n = s.replace("(", "").replace(")", "")
+        assert ast == {'tag': 'number', 'value': int(s_n)}
         assert tokens[0]['tag'] == None 
+    # Test parenthesized expression with an operator
     tokens = tokenize("(2+3)")
     ast, tokens = parse_factor(tokens)
     assert ast == {'tag': '+', 'left': {'tag': 'number', 'value': 2}, 'right': {'tag': 'number', 'value': 3}}
+    # Additional test: floating point number
+    tokens = tokenize("3.14")
+    ast, tokens = parse_factor(tokens)
+    assert ast == {'tag': 'number', 'value': 3.14}
+    assert tokens[0]['tag'] == None
+    # Additional test: nested parentheses
+    tokens = tokenize("((1))")
+    ast, tokens = parse_factor(tokens)
+    assert ast == {'tag': 'number', 'value': 1}
+    assert tokens[0]['tag'] == None
 
 def parse_term(tokens):
     """
@@ -66,17 +79,38 @@ def test_parse_term():
     term = factor { "*"|"/" factor }
     """
     print("testing parse_term()")
-    for s in ["1","22","333"]:
+    # Test simple numbers
+    for s in ["1", "22", "333"]:
         tokens = tokenize(s)
         ast, tokens = parse_term(tokens)
-        assert ast=={'tag': 'number', 'value': int(s)}
+        assert ast == {'tag': 'number', 'value': int(s)}
         assert tokens[0]['tag'] == None 
+    # Test multiplication only
     tokens = tokenize("2*4")
     ast, tokens = parse_term(tokens)
     assert ast == {'tag': '*', 'left': {'tag': 'number', 'value': 2}, 'right': {'tag': 'number', 'value': 4}}
+    # Test multiplication then division
     tokens = tokenize("2*4/6")
     ast, tokens = parse_term(tokens)
-    assert ast == {'tag': '/', 'left': {'tag': '*', 'left': {'tag': 'number', 'value': 2}, 'right': {'tag': 'number', 'value': 4}}, 'right': {'tag': 'number', 'value': 6}}
+    assert ast == {
+        'tag': '/',
+        'left': {'tag': '*', 'left': {'tag': 'number', 'value': 2}, 'right': {'tag': 'number', 'value': 4}},
+        'right': {'tag': 'number', 'value': 6}
+    }
+    # Additional test: multiplication with parenthesized expression
+    tokens = tokenize("2*(3+4)")
+    ast, tokens = parse_term(tokens)
+    expected_ast = {
+        'tag': '*',
+        'left': {'tag': 'number', 'value': 2},
+        'right': {
+            'tag': '+',
+            'left': {'tag': 'number', 'value': 3},
+            'right': {'tag': 'number', 'value': 4}
+        }
+    }
+    assert ast == expected_ast
+    assert tokens[0]['tag'] == None
 
 def parse_expression(tokens):
     """
