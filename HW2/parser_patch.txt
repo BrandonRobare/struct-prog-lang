@@ -1,0 +1,16 @@
+def parse_brobare_statement(tokens):
+    """
+    brobare_statement = "brobare"
+    """
+    assert tokens[0]["tag"] == "brobare", f"Expected 'brobare', got {tokens[0]}"
+    return {"tag": "brobare"}, tokens[1:]
+
+# Insert dispatch in parse_statement function
+# inside parse_statement(tokens)
+# Add this case:
+# if tag == "brobare":
+#     return parse_brobare_statement(tokens)
+
+# Also modify grammar string and statement rule to include:
+# brobare_statement = "brobare"
+# statement = ... | brobare_statement | ...
