@@ -406,6 +406,41 @@ def evaluate(ast, environment):
             return value, "return"
         return None, "return"
 
+    if ast["tag"] == "for":
+        iterable, _ = evaluate(ast["iterable"], environment)
+
+        if isinstance(iterable, list):
+            for item in iterable:
+                local_env = copy.deepcopy(environment)
+                local_env[ast["var"]] = item
+                result, exit_status = evaluate(ast["body"], local_env)
+                if exit_status:
+                    if exit_status == "break":
+                        break
+                    elif exit_status == "continue":
+                        continue
+                    else:
+                        return result, exit_status
+            return None, False
+
+        elif isinstance(iterable, dict):
+            for key in iterable:
+                local_env = copy.deepcopy(environment)
+                local_env[ast["var"]] = key
+                result, exit_status = evaluate(ast["body"], local_env)
+                if exit_status:
+                    if exit_status == "break":
+                        break
+                    elif exit_status == "continue":
+                        continue
+                    else:
+                        return result, exit_status
+            return None, False
+
+        else:
+            raise Exception("Iterable in 'for' loop must be a list or object.")
+
+
     assert False, f"Unknown tag [{ast['tag']}] in AST"
 
 

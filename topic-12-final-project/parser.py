@@ -47,6 +47,10 @@ grammar = """
     statement = if_statement | while_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
 
     program = [ statement { ";" statement } {";"} ]
+
+    for_statement = "for" "(" identifier "in" expression ")" statement_list
+    statement = if_statement | while_statement | for_statement | function_statement | return_statement | print_statement | exit_statement | import_statement | break_statement | continue_statement | assert_statement | expression
+
     """
 
 # BASIC EXPRESSIONS
@@ -878,25 +882,26 @@ def parse_statement_list(tokens):
     tokens = tokens[1:]
     statements = []
     while True:
-        # terminate at end of statement list
         if tokens[0]["tag"] == "}":
             tokens = tokens[1:]             
             return {"tag": "statement_list", "statements": statements}, tokens
-        # skip extra separators
+        
         if tokens[0]["tag"] == ";":
             tokens = tokens[1:]             
             continue
-        # parse a statement and add it to the list
+        
         statement, tokens = parse_statement(tokens)
         statements.append(statement)
-        # we don't need a semicolon terminator after block-terminated statements
-        if statement["tag"] in ["if","while","function"]:     
+
+        # Updated here to add "for"
+        if statement["tag"] in ["if","while","function","for"]:  
             continue
-        # we don't need a semicolon terminator after function assignments
+
         if statement["tag"] == "assign" and statement["value"]["tag"] == "function":
             continue        
-        # otherwise require a terminator
+
         assert tokens[0]["tag"] in [";","}"], f"Statement terminator missing {tokens}."
+
 
 def test_parse_statement_list():
     """
@@ -995,6 +1000,37 @@ def test_parse_if_statement():
             "statements": [{"tag": "print", "value": {"tag": "number", "value": 2}}],
         },
     }
+
+def parse_for_statement(tokens):
+    """
+    for_statement = "for" "(" identifier "in" expression ")" statement_list
+    """
+    assert tokens[0]["tag"] == "for", f"Expected 'for', got {tokens[0]}"
+    tokens = tokens[1:]
+
+    assert tokens[0]["tag"] == "(", f"Expected '(', got {tokens[0]}"
+    tokens = tokens[1:]
+
+    assert tokens[0]["tag"] == "identifier", f"Expected identifier, got {tokens[0]}"
+    loop_var = tokens[0]["value"]
+    tokens = tokens[1:]
+
+    assert tokens[0]["tag"] == "in", f"Expected 'in', got {tokens[0]}"
+    tokens = tokens[1:]
+
+    iterable, tokens = parse_expression(tokens)
+
+    assert tokens[0]["tag"] == ")", f"Expected ')', got {tokens[0]}"
+    tokens = tokens[1:]
+
+    body, tokens = parse_statement_list(tokens)
+
+    return {
+        "tag": "for",
+        "var": loop_var,
+        "iterable": iterable,
+        "body": body
+    }, tokens
 
 
 def parse_while_statement(tokens):
@@ -1228,6 +1264,8 @@ def parse_statement(tokens):
         return parse_if_statement(tokens)
     if tag == "while":
         return parse_while_statement(tokens)
+    if tag == "for":
+        return parse_for_statement(tokens)    
     if tag == "function":
         return parse_function_statement(tokens)
     if tag == "return":
@@ -1245,6 +1283,7 @@ def parse_statement(tokens):
     if tag == "assert":
         return parse_assert_statement(tokens)
     return parse_expression(tokens)
+
 
 
 def test_parse_statement():
